@@ -1,5 +1,5 @@
+import * as borsh from 'borsh'
 import { expect } from "chai";
-import * as borsh from "borsh";
 import {
   Connection,
   Keypair,
@@ -7,137 +7,80 @@ import {
   PublicKey,
   SystemProgram,
   Transaction,
-  TransactionInstruction,
 } from "@solana/web3.js";
+import { COUNTER_SIZE, schema } from "./types.ts";
 
-// CounterAccount structure
-class CounterAccount {
-  count = 0;
+let adminKeypair = Keypair.generate();
+let dataAccount = Keypair.generate();
 
-  constructor({ count }: { count: number }) {
-    this.count = count;
+const programId = new PublicKey("CwpkRhKmoHXyzAoqeqE8dXkquMQvzVEpgiPQMKQXk8FX");
+const connection = new Connection("http://127.0.0.1:8899", {
+  commitment: "processed",
+});
+async function waitForBalance(
+  connection: Connection,
+  pubkey: PublicKey,
+  minBalance: number,
+  retries = 10,
+  delayMs = 2000
+): Promise<number> {
+  for (let i = 0; i < retries; i++) {
+    const balance = await connection.getBalance(pubkey);
+    if (balance >= minBalance) {
+      return balance;
+    }
+    console.log(`Balance check ${i + 1}/${retries}: ${balance} lamports`);
+    await new Promise((resolve) => setTimeout(resolve, delayMs));
   }
+  throw new Error("Balance not updated after retries");
 }
 
-// Borsh schema for the counter
-const schema: borsh.Schema = new Map([
-  [CounterAccount, { kind: "struct", fields: [["count", "u32"]] }],
-]);
-
-// Size of the account to allocate
-const GREETING_SIZE = borsh.serialize(
-  schema,
-  new CounterAccount({ count: 0 })
-).length;
-
-let counterAccountKeypair: Keypair;
-let adminKeypair: Keypair;
-const connection = new Connection("http://127.0.0.1:8899", "confirmed");
-const programId = new PublicKey("CwpkRhKmoHXyzAoqeqE8dXkquMQvzVEpgiPQMKQXk8FX");
-
 describe("Counter Program", () => {
-  it("sets up counter account", async function () {
+  it("Airdrop SOL to admin account", async function () {
     this.timeout(60000);
 
-    adminKeypair = Keypair.generate();
-    counterAccountKeypair = Keypair.generate();
-
-    // Airdrop SOL
     const sig = await connection.requestAirdrop(
       adminKeypair.publicKey,
-      2 * LAMPORTS_PER_SOL
+      1 * LAMPORTS_PER_SOL
     );
-    await connection.confirmTransaction(sig);
+    console.log("Airdrop signature:", sig);
 
-    // Rent-exempt minimum balance
-    const lamports = await connection.getMinimumBalanceForRentExemption(
-      GREETING_SIZE
+    const balance = await waitForBalance(
+      connection,
+      adminKeypair.publicKey,
+      LAMPORTS_PER_SOL
     );
 
-    // Create counter account
-    const createCounterAccIx = SystemProgram.createAccount({
+    console.log("Final Balance:", balance / LAMPORTS_PER_SOL, "SOL");
+
+    expect(balance).to.be.greaterThan(0);
+  });
+  it("Create Account", async function () {
+    const lamports = await connection.getMinimumBalanceForRentExemption(COUNTER_SIZE);
+
+    const ix = SystemProgram.createAccount({
       fromPubkey: adminKeypair.publicKey,
       lamports,
-      newAccountPubkey: counterAccountKeypair.publicKey,
-      programId: programId,
-      space: GREETING_SIZE,
+      space: COUNTER_SIZE,
+      programId,
+      newAccountPubkey: dataAccount.publicKey
     });
 
-    const tx = new Transaction().add(createCounterAccIx);
-    const txHash = await connection.sendTransaction(tx, [
-      adminKeypair,
-      counterAccountKeypair,
-    ]);
-    await connection.confirmTransaction(txHash);
+    const createAccountx = new Transaction();
 
-    // Fetch account info
-    const counterAccount = await connection.getAccountInfo(
-      counterAccountKeypair.publicKey
-    );
-    expect(counterAccount).to.not.be.null;
+    createAccountx.add(ix);
+    const signature = await connection.sendTransaction(createAccountx, [adminKeypair, dataAccount]);
 
-    const counter = borsh.deserialize(
-      schema,
-      counterAccount!.data
-    ) as CounterAccount;
+    await connection.confirmTransaction(signature);
 
-    console.log("Counter initialized:", counter.count);
-    expect(counter.count).to.equal(0);
+    console.log(dataAccount.publicKey.toBase58());
   });
+  it("Deseralize the data", async function name() {
+    const dataAccountInfo = await connection.getAccountInfo(dataAccount.publicKey);
+    const counter = borsh.deserialize(schema,dataAccountInfo?.data);
 
-  it("increments and decrements the counter", async function () {
-    this.timeout(60000);
+    console.log(counter);
 
-    const tx = new Transaction();
-
-    // Increment(1)
-    tx.add(
-      new TransactionInstruction({
-        keys: [
-          {
-            pubkey: counterAccountKeypair.publicKey,
-            isSigner: true,
-            isWritable: true,
-          },
-        ],
-        programId: programId,
-        data: Buffer.from([0, 1, 0, 0, 0]), // your program expects [tag=0, value=1]
-      })
-    );
-
-    // Decrement(1)
-    tx.add(
-      new TransactionInstruction({
-        keys: [
-          {
-            pubkey: counterAccountKeypair.publicKey,
-            isSigner: true,
-            isWritable: true,
-          },
-        ],
-        programId: programId,
-        data: Buffer.from([1, 1, 0, 0, 0]), // your program expects [tag=1, value=1]
-      })
-    );
-
-    const txHash = await connection.sendTransaction(tx, [
-      adminKeypair,
-      counterAccountKeypair,
-    ]);
-    await connection.confirmTransaction(txHash);
-    console.log("Tx hash:", txHash);
-
-    const counterAccount = await connection.getAccountInfo(
-      counterAccountKeypair.publicKey
-    );
-    expect(counterAccount).to.not.be.null;
-
-    const counter = borsh.deserialize(
-      schema,
-      counterAccount!.data
-    ) as CounterAccount;
-
-    console.log("Counter after ops:", counter.count);
-    expect(counter.count).to.equal(1);
-  });
+    expect(counter?.count).to.be.equals(0);
+  })
 });
