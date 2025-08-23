@@ -41,7 +41,6 @@ pub fn counter_contract(
 
     counter.serialize(&mut *account.data.borrow_mut())?;
 
-    // Log the updated counter value
     msg!("Counter updated to {}", counter.count);
 
     Ok(())
