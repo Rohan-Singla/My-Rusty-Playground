@@ -2,11 +2,23 @@ import * as anchor from "@coral-xyz/anchor";
 import { Program } from "@coral-xyz/anchor";
 import { AnchorCalculator } from "../target/types/anchor_calculator";
 import { expect } from 'chai';
+import dotenv from "dotenv"
+dotenv.config();
 
 //Mocha works using predescribed it blocks
 describe("calculator", () => {
+  const provider = new anchor.AnchorProvider(
+    new anchor.web3.Connection(process.env.ANCHOR_PROVIDER_URL!, "confirmed"),
+    new anchor.Wallet(
+      anchor.web3.Keypair.fromSecretKey(
+        Uint8Array.from(JSON.parse(require("fs").readFileSync(process.env.ANCHOR_WALLET!, "utf8")))
+      )
+    ),
+    {}
+  );
+
   // Configure the client to use the local cluster.
-  anchor.setProvider(anchor.AnchorProvider.env());
+  anchor.setProvider(provider);
 
   //Referencing the program - Abstraction that allows us to call methods of our SOL program.
   const program = anchor.workspace.AnchorCalculator as Program<AnchorCalculator>;
