@@ -1,6 +1,6 @@
 import * as anchor from "@coral-xyz/anchor";
 import { Program } from "@coral-xyz/anchor";
-import { Calculator } from "../target/types/calculator";
+import { AnchorCalculator } from "../target/types/anchor_calculator";
 import { expect } from 'chai';
 
 //Mocha works using predescribed it blocks
@@ -9,7 +9,7 @@ describe("calculator", () => {
   anchor.setProvider(anchor.AnchorProvider.env());
 
   //Referencing the program - Abstraction that allows us to call methods of our SOL program.
-  const program = anchor.workspace.Calculator as Program<Calculator>;
+  const program = anchor.workspace.AnchorCalculator as Program<AnchorCalculator>;
   const programProvider = program.provider as anchor.AnchorProvider;
 
   //Generating a keypair for our Calculator account
