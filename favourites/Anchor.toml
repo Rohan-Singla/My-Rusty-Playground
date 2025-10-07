@@ -6,7 +6,7 @@ resolution = true
 skip-lint = false
 
 [programs.localnet]
-mint_nft = "2fPGwsAnaDVWKsE7RskUFv3kxDrhXNpixkLG6zZsKCJ8"
+favourites = "FxJezxhbT8vcm9QTA8fN23D5XcCwaAjJEoCENtr1KPY3"
 
 [registry]
 url = "https://api.apr.dev"

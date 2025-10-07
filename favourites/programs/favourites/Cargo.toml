@@ -1,12 +1,12 @@
 [package]
-name = "mint_nft"
+name = "favourites"
 version = "0.1.0"
 description = "Created with Anchor"
 edition = "2021"
 
 [lib]
 crate-type = ["cdylib", "lib"]
-name = "mint_nft"
+name = "favourites"
 
 [features]
 default = []
@@ -21,9 +21,7 @@ custom-panic = []
 
 
 [dependencies]
-anchor-lang = "0.31.1"
-mpl-core = { version = "0.10.1"}
-mpl-token-metadata = "5.1.1"
+anchor-lang = { version = "0.31.1", features = ["init-if-needed"] }
 
 
 [lints.rust]
