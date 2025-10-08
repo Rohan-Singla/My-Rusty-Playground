@@ -22,7 +22,11 @@ custom-panic = []
 
 [dependencies]
 anchor-lang = { version = "0.31.1", features = ["init-if-needed"] }
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 
 
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(target_os, values("solana"))'] }
+
+[dev-dependencies]
+litesvm = "0.8.1"
